@@ -1,32 +1,39 @@
 cff-version: 1.2.0
-message: "If you use the PaleoHumans dataset, please cite the original article."
-title: "PaleoHumans: European Upper Palaeolithic Homo sapiens skeletal record"
+title: "PaleoHumans: the European Upper Palaeolithic Homo sapiens skeletal record"
+message: "If you use the PaleoHumans dataset, please cite the original article (see preferred-citation)."
+type: dataset
 authors:
   - family-names: "Arenas del Amo"
-    given-names: "Sergio"
+    given-names: "S."
   - family-names: "Armentano Oller"
-    given-names: "Núria"
+    given-names: "N."
   - family-names: "Daura"
-    given-names: "Joan"
+    given-names: "J."
   - family-names: "Sanz"
-    given-names: "Montserrat"
-year: 2024
-doi: "10.1016/j.jasrep.2024.104391"
+    given-names: "M."
+license: CC-BY-4.0
+repository-code: "https://github.com/SergioArenas98/PaleoHumans_Project"
 url: "https://paleohumans.org"
-license: "CC-BY-4.0"
+keywords:
+  - "Upper Palaeolithic"
+  - "Homo sapiens"
+  - "bioarchaeology"
+  - "skeletal record"
+  - "open data"
 preferred-citation:
   type: article
   title: "Overview of the European Upper Palaeolithic: The Homo sapiens bone record"
   authors:
     - family-names: "Arenas del Amo"
-      given-names: "Sergio"
+      given-names: "S."
     - family-names: "Armentano Oller"
-      given-names: "Núria"
+      given-names: "N."
     - family-names: "Daura"
-      given-names: "Joan"
+      given-names: "J."
     - family-names: "Sanz"
-      given-names: "Montserrat"
-  journal: "Journal of Archaeological Science: Reports"
-  volume: "53"
+      given-names: "M."
   year: 2024
+  journal: "Journal of Archaeological Science: Reports"
+  volume: 53
+  start: 104391
   doi: "10.1016/j.jasrep.2024.104391"
