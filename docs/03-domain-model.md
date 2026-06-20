@@ -72,10 +72,10 @@ Relationships:
 
 `Culture` is an archaeological technocomplex (Aurignacian, Gravettian,
 Magdalenian, …). It carries `cultureName` (unique), a `phase` enum, a BP range
-(`startBp >= endBp`, enforced by DB and `CultureService`), display colours
-(`color`, `colorRgb` — authoritative for timeline/map), optional `region`, and
+(`startBp >= endBp`, enforced by DB and `CultureService`), optional `region`, and
 optional `description`. `features` is a list of repeatable textual
-characteristics (`CultureFeature`, one-to-many).
+characteristics (`CultureFeature`, one-to-many). `Culture` no longer carries
+display colour fields — they were removed from the model, database, and API.
 
 A `Culture` may classify many `ArchaeologicalContext` rows. The embedded form
 (`CultureEmbedResponse`) omits `region`, `description`, and `updatedAt`.

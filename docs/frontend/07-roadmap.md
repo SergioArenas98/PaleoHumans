@@ -56,7 +56,7 @@ These ideas appeared in older exploration documents and have not been committed 
 | Better separation between Inter / JetBrains Mono | The DEEP TIME design intent says data uses JetBrains Mono. `dark-theme.css` currently aliases all `--dt-font-*` slots to Space Grotesk. A future pass can load Inter + JetBrains Mono and un-alias the tokens. |
 | Mini-timeline strip on every record page | Stated as a DEEP TIME principle. Partial implementation; not consistently present on Site Details and Individual Details. |
 | Switch to a more scholarly icon set | Material Symbols signal "consumer app". The replacement is not chosen. |
-| Animated chronological marker entrance on the map | Considered in the DEEP FIELD exploration; rejected for SSR risk and color-competition with culture palette. Could be revisited as an optional view. |
+| Animated chronological marker entrance on the map | Considered in the DEEP FIELD exploration; rejected for SSR risk. Could be revisited as an optional view. (The former per-culture colour palette no longer exists; cultures are neutral.) |
 
 ---
 

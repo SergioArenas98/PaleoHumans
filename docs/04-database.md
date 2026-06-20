@@ -175,9 +175,9 @@ only `dates_bp_uncal` ± `dates_range`.
 
 ### 4.6 Cultures
 
-`culture` (technocomplex; `phase`, `start_bp ≥ end_bp`, visualisation `color` /
-`color_rgb`) and `culture_feature` (one-to-many textual features).
-`archaeological_context.culture_id` is `ON DELETE SET NULL`.
+`culture` (technocomplex; `phase`, `start_bp ≥ end_bp`) and `culture_feature`
+(one-to-many textual features). `archaeological_context.culture_id` is
+`ON DELETE SET NULL`. Display colour columns are no longer part of the schema.
 
 ### 4.7 Bibliography
 
@@ -208,8 +208,8 @@ exported by `/api/dataset/download`, and connect to no archaeological table.
 
 `culture` (`culture/Culture.java`): `culture_id` PK; `culture_name` TEXT NOT NULL
 UNIQUE; `phase` `culture_phase_enum` NOT NULL; `start_bp`, `end_bp` INTEGER NOT
-NULL (CHECK `start_bp >= end_bp`); `color`, `color_rgb` TEXT NOT NULL; `region`,
-`description` TEXT; `updated_at` (trigger).
+NULL (CHECK `start_bp >= end_bp`); `region`, `description` TEXT; `updated_at`
+(trigger).
 
 `culture_feature` (`culture_feature/CultureFeature.java`): `culture_feature_id`
 PK; `culture_id` FK → `culture` ON DELETE CASCADE; `feature` TEXT NOT NULL;

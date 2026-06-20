@@ -18,7 +18,7 @@ The two applications use **two separate, isolated design systems**. They do not 
 DEEP TIME is the active visual direction for `projects/web`. The principles, in order of priority:
 
 1. **Darkness as fidelity.** The near-void background (`--dt-bg: #080808`) is not decorative dark mode; it is a statement that the documented humans lived 11,700–45,300 years before electricity. The dark environment is the correct backdrop for the data.
-2. **Culture colors as the only chromatic vocabulary.** Roughly 19 archaeological culture colors (from each `Culture.color` and `Culture.colorRgb`) are the exclusive source of chrominance. UI surfaces, navigation, and controls are neutral. New chromatic decisions must resolve to either a neutral token or `var(--culture-color)`.
+2. **A neutral, near-monochrome palette.** The interface has no chromatic vocabulary tied to data: UI surfaces, navigation, controls, culture chips, timeline bands, and map markers are all neutral. Cultures are distinguished by textual metadata (name, phase, BP range, region, features), ordering, and structure — never by colour. Culture colour was removed end-to-end: the backend dropped `Culture.color` / `Culture.colorRgb` from the model, database, and API, and the frontend no longer reads, derives, or renders any per-culture colour. New chromatic decisions must resolve to a neutral `--dt-*` token.
 3. **Data is a precision instrument.** Numeric and identifier data uses a monospaced font (the codebase declares `JetBrains Mono` as the intended `--dt-font-data`, though `dark-theme.css` currently aliases all four font slots to `Space Grotesk`; see "Font reality" below).
 4. **Temporal depth is always present.** Where possible, pages surface chronological orientation: KPI strips, culture chips, and the dedicated `/timeline` view.
 5. **Each page has one job.** Page composition follows the page's communication purpose rather than a homogeneous template.
@@ -51,28 +51,25 @@ Full declaration: `projects/web/src/styles/dark-theme.css`.
 | `--dt-success` / `--dt-success-bg` | `#4CAF82` / `rgba(76,175,130,0.08)` | Success |
 | `--dt-warning` / `--dt-warning-bg` | `#F5A623` / `rgba(245,166,35,0.08)` | Warning |
 
-### Culture color binding
+### Culture identity (neutral)
 
-Culture color must come from the backend, set per component via inline CSS variables:
+Cultures carry **no colour**. They are surfaced through text and structure only:
+culture name, phase label, BP range, ordering (oldest → most recent), and
+neutral UI primitives (neutral chips, neutral timeline bands/accents, neutral
+separators). Culture colour was removed end-to-end — the backend `Culture.color`
+/ `Culture.colorRgb` fields and the `culture.color` / `culture.color_rgb`
+columns no longer exist, and the API returns no culture colour.
 
-```html
-<div [style.--culture-color]="culture.color"
-     [style.--culture-rgb]="culture.colorRgb"
-     class="ctx-card">
-  ...
-</div>
-```
+The previous per-culture CSS variables (`--culture-color`, `--culture-rgb`) and
+the derived `--dt-culture-color` / `--dt-culture-wash` / `--dt-culture-wash-strong`
+/ `--dt-culture-glow` tokens have been **deleted**. Any accent that previously
+read them now uses a neutral token (e.g. `--dt-text-2`, `--dt-border-strong`) or
+a fixed neutral stone (`rgba(158, 154, 148, …)`). The timeline keeps local
+`--c-color` / `--c-rgb` variables but they now resolve to neutral defaults set
+once on the page `:host`, so every band/dot/chip renders the same neutral.
 
-Derived tokens then resolve correctly:
-
-```css
---dt-culture-color:       var(--culture-color, #888888);
---dt-culture-wash:        rgba(var(--culture-rgb, 136,136,136), 0.06);
---dt-culture-wash-strong: rgba(var(--culture-rgb, 136,136,136), 0.25);
---dt-culture-glow:        rgba(var(--culture-rgb, 136,136,136), 0.20);
-```
-
-Markers on the public Map and the SiteDetailsPage mini-map are **neutral** (near-black outer disc, muted stone centre). Culture color is reserved for chips, strips, and timeline accents — never the marker itself.
+Markers on the public Map and the SiteDetailsPage mini-map are **neutral**
+(near-black outer disc, muted stone centre) — as they always were.
 
 ### Typography
 
@@ -100,7 +97,7 @@ These structural patterns recur in the public web and should be preserved across
 - **Numbered sections** (`01`, `02`, `03`) on long record pages (Site Detail, Individual Detail) for orientation.
 - **KPI strip** under page heroes (e.g. Contexts / MNI / Individuals / Dated samples).
 - **Sticky sidebar quick-facts** on long detail pages.
-- **Culture chips** for quick culture identification, colored via `var(--dt-culture-color)`.
+- **Culture chips** for quick culture identification, with neutral styling (no per-culture colour).
 - **Mini-timeline strip** intended for record pages (declared as a DEEP TIME idea; partial implementation. `Requires code verification` for current state on each page).
 - **Inline mini-map** on SiteDetailsPage, framed with a neutral DEEP TIME border + matting + hairline + drop shadow.
 

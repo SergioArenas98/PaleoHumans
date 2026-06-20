@@ -126,7 +126,7 @@ Loading states:
 - Search by site name + country filter + culture multi-select.
 - `PaleoTimeControlComponent` toggles a palaeogeographic reconstruction overlay (ice sheets, emerged land by cal BP slice). The tile source for the overlay is external and not present in this repository.
 - Click a marker → right-hand site preview panel (totals, culture chips, dominant culture). Click empty map → close panel.
-- Marker design is shared with the SiteDetailsPage mini-map via `projects/web/src/app/utils/map-markers.ts`. Markers are neutral — culture color is never used on the marker itself.
+- Marker design is shared with the SiteDetailsPage mini-map via `projects/web/src/app/utils/map-markers.ts`. Markers are neutral — cultures carry no colour anywhere in the public web (filters identify cultures by name/id only).
 - Data source: **only** `GET /api/stats/map-timeline`. Do not load unfiltered `/api/archaeological-contexts`.
 
 ### `/timeline` — Timeline
