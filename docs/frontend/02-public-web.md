@@ -86,7 +86,7 @@ Muted:    Dataset · Methodology · About
 - Hero (left): breadcrumb, site h1, location line, coordinates, KPI strip (Contexts, MNI, Individuals, Dated samples).
 - Hero (right): inline Leaflet mini-map with one marker. Always uses the OpenTopoMap physical base layer; the Physical / Political toggle from MapPage is not exposed here.
 - Body: archaeological-context cards sorted from oldest culture (`culture.startBp` desc) to most recent. Title prefers `stratigraphicContext`, falls back to `culture.cultureName`, then to "Archaeological context". `archaeologicalContextId` is rendered as small metadata under the title.
-- References: deduplicated list (authors, year, title, journal, DOI).
+- References: deduplicated list, each rendered as a formatted citation (journal article, article/chapter in book, or complete book — see [`/bibliography`](#bibliography)).
 - Loads only `GET /api/sites/:id` and `GET /api/archaeological-contexts?siteId=`. Does **not** load `/api/stats/map-timeline` or full collection endpoints.
 
 ### `/individuals` — Individuals list
@@ -151,6 +151,23 @@ Loading states:
 - Backend `q` search, page-size selector, prev/next.
 - Results grouped by decade within the currently loaded page.
 - Lazy-loaded route (`loadComponent`).
+- Each reference renders as a formatted citation via the local helper
+  `features/references/reference-citation.ts`, which selects one of three project
+  citation shapes from the `isBook` / `isArticleInBook` flags:
+  - **Journal article** (default; also used when both flags are null) —
+    `Authors, Year. Title. Journal Volume (Issue), Pages. DOI`
+  - **Article/chapter in book** (`isArticleInBook = true`) —
+    `Authors, Year. Title, in: Editor(s), Book title, Corporate author, City, Pages.`
+  - **Complete book** (`isBook = true`) —
+    `Authors, Year. Book title. Corporate author, City, Pages.`
+  Missing/blank fields are dropped without leaving empty punctuation (no doubled
+  commas/periods, no empty issue parentheses, no dangling `in:`). The DOI renders
+  only when present, as a clickable `https://doi.org/…` link.
+- The public `Reference` model (`features/references/model/Reference.ts`) mirrors
+  the backend contract: `authors` and `year` are the only universally required
+  fields; `title` and `journal` are nullable; complete books store their title in
+  `book`. Fields: `authors`, `year`, `title`, `editor`, `book`, `corporateAuthor`,
+  `city`, `journal`, `volume`, `issue`, `pages`, `doi`, `isBook`, `isArticleInBook`.
 
 ### `/analysis`
 

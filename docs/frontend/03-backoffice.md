@@ -36,7 +36,7 @@ All routes are registered in `projects/backoffice/src/app/app.routes.ts`. Every 
 | Dashboard | `/admin/dashboard` | — | — | Counts via `GET /api/admin/stats/dashboard`. |
 | Sites | `/admin/sites` | `/admin/sites/new` | `/admin/sites/:id` | Reference link/unlink UI on detail. |
 | Cultures | `/admin/cultures` | `/admin/cultures/new` | `/admin/cultures/:id` | `features` captured as textarea, split on newline. |
-| References | `/admin/references` | `/admin/references/new` | `/admin/references/:id` | Owning side is Site/Context — no relation panel on reference detail. |
+| References | `/admin/references` | `/admin/references/new` | `/admin/references/:id` | Owning side is Site/Context — no relation panel on reference detail. A reference-type selector (Journal article / Article-chapter in book / Complete book / Unspecified) drives `isBook` + `isArticleInBook`; the form also manages `editor`, `book`, `corporateAuthor`, `city` and shows a live citation preview. Only `authors` is required (`title`/`journal` are optional). |
 | Archaeological Contexts | `/admin/archaeological-contexts` | `…/new` | `…/:id` | Site/culture/reference editing. v1 `/admin/osteological-units` redirects here. |
 | Individuals | `/admin/individuals` | `…/new` | `…/:id` | Attach/detach archaeological context; FK-based, no link panel. |
 | Bones | `/admin/bones` | `…/new` | `…/:id` | Conditional fields by catalog category. Individual association is **M2M** (`bone_individual`): create/detail use a one-or-more individual multi-select, not a single FK. |

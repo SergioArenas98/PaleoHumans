@@ -267,8 +267,20 @@ only via the backoffice (`/admin/dating-techniques`).
 
 ### Reference (BibliographicReference)
 
-Bibliographic entries. Required: `authors`, `year`, `title`, `journal`.
-Optional: `volume`, `issue`, `pages`, `doi`, `url`, `publisher`, `notes`.
+Bibliographic entries covering three reference types: **journal articles**,
+**articles/chapters inside a book**, and **complete books**. Required:
+`authors`, `year`. Optional (each applies only to some types): `title` (the work
+title for journal articles and articles/chapters in a book), `book` (the book
+title for complete books), `editor`, `corporateAuthor` (the institutional author
+responsible for the intellectual creation of the work), `city`, `journal`,
+`volume`, `issue`, `pages`, `doi`, `isBook`, `isArticleInBook`.
+
+`title` and `journal` are nullable because they do not apply to every reference
+type. The two type flags are **mutually exclusive**: `isBook` and
+`isArticleInBook` cannot both be `true` (enforced by the
+`chk_bibliographic_reference_type_flags` DB constraint and by `ReferenceMapper`,
+which rejects the combination with a `400`). To keep import/curation of
+incomplete data possible, `book` is **not** required even when `isBook` is true.
 
 > The Java class is `Reference` and the table is `bibliographic_reference`. The
 > API resource path is `/api/references` (paginated, default sort `year,desc`

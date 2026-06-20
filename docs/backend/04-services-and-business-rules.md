@@ -247,6 +247,16 @@ client can switch the origin in a single call.
 - CRUD; bridge collections to `Site` and `ArchaeologicalContext` are
   managed from the parent side (PATCH on `Site`/`ArchaeologicalContext`),
   not from `Reference` itself.
+- References cover three types (journal article, article/chapter in a
+  book, complete book). Only `authors` and `year` are required; `title`
+  and `journal` are optional (the work title is in `title` for articles
+  and in `book` for complete books). `ReferenceMapper` rejects the
+  invalid combination `isBook == true && isArticleInBook == true`
+  (mirrors the `chk_bibliographic_reference_type_flags` DB constraint)
+  with an `IllegalArgumentException` → `400`, checked against the merged
+  entity so partial PATCH updates are covered. `book` is intentionally
+  not required when `isBook` is true, so incomplete imported references
+  can still be saved.
 
 ## StatsService (`stats/`)
 

@@ -95,11 +95,14 @@ For how these connect, the deployment topology, and the monorepo layout, see
 
 ## Licensing
 
-- **Article:** CC BY 4.0.
-- **Database:** CC BY-SA 4.0.
+- **Dataset:** CC BY 4.0.
+- **Website / documentation text** (unless otherwise stated): CC BY 4.0.
+- **Article:** CC BY 4.0 (cite the 2024 source publication).
+- **Name, logo and visual brand:** reserved (not covered by CC BY 4.0).
 
-Both must remain clearly displayed on the public site (About, Dataset), along
-with the article DOI and citation.
+These must remain clearly displayed on the public site (About, Dataset), along
+with the article DOI and citation. See the root `LICENSE.md` and `CITATION.cff`
+for the full repository terms.
 
 ## Public dataset access
 

@@ -328,9 +328,15 @@ FK non-null; the non-null FK matches `sample_origin`;
 
 ### `bibliographic_reference` and bridges (`reference/Reference.java`)
 
-`bibliographic_reference_id` PK; `authors`, `year`, `title`, `journal` NOT NULL;
-`volume`, `issue`, `pages`, `doi` optional; `updated_at` (trigger).
-`site_bibliographic_reference` and
+`bibliographic_reference_id` PK; `authors`, `year` NOT NULL; `title`, `editor`,
+`book`, `corporate_author`, `city`, `journal`, `volume`, `issue`, `pages`, `doi`
+optional; `is_book`, `is_article_in_book` nullable BOOLEAN type flags;
+`updated_at` (trigger). `title` and `journal` are nullable because they do not
+apply to every reference type (journal article, article/chapter in a book,
+complete book): the work title lives in `title` for articles and in `book` for
+complete books, and `corporate_author` holds the institutional author. The
+`chk_bibliographic_reference_type_flags` CHECK forbids `is_book` and
+`is_article_in_book` both being true. `site_bibliographic_reference` and
 `archaeological_context_bibliographic_reference` are composite-PK bridges with
 both FKs ON DELETE CASCADE.
 
