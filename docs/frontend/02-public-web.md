@@ -149,7 +149,7 @@ Loading states:
 
 - Paginated reference list via `ReferenceService.getAll({ q, page, size })` → `GET /api/references`.
 - Backend `q` search, page-size selector, prev/next.
-- Results grouped by decade within the currently loaded page.
+- Results grouped by exact publication year within the currently loaded page (newest year first; references with no year fall under an `Unknown year` group).
 - Lazy-loaded route (`loadComponent`).
 - Each reference renders as a formatted citation via the local helper
   `features/references/reference-citation.ts`, which selects one of three project
@@ -163,6 +163,30 @@ Loading states:
   Missing/blank fields are dropped without leaving empty punctuation (no doubled
   commas/periods, no empty issue parentheses, no dangling `in:`). The DOI renders
   only when present, as a clickable `https://doi.org/…` link.
+- **Typographic convention & line layout.** The helper exposes the citation both
+  as flat styled `referenceCitationSegments()` (`{ text, kind }` fragments) and,
+  for the reading pages, as `referenceCitationLines()` — the same content
+  regrouped onto three readable lines (`authorsLine` · `titleLine` ·
+  `metadataLine`, plus `doiUrl`) and rendered by the local
+  `ReferenceCitationComponent` (`features/references/reference-citation.component.ts`):
+  - **Line 1** — authors and year.
+  - **Line 2** — the main work title (`title`, or `book` for a complete book), in **bold**.
+  - **Line 3** — publication/container metadata: journal + volume/issue/pages for an
+    article; `in:` + editor/book/corporate author/city/pages for a chapter;
+    corporate author/city/pages for a complete book. The **container title is
+    italic** (journal for an article, the book for a chapter; a complete book's
+    `book` is the bold title and has no separate container). Authors/year/metadata
+    stay normal weight; lines are justified where they wrap.
+  The required citation order, punctuation and plain-text output are unchanged
+  (`referenceCitationParts` / `formatReferenceCitation` derive from the same flat
+  segments, and the line grouping reuses those building blocks). Absent fields
+  collapse to empty lines that the template skips — no blank lines or stray
+  punctuation. The **DOI link is preserved** on each page (clickable
+  `https://doi.org/…`). The same component is reused on `/bibliography`,
+  `/sites/:id` and `/individuals/:id`, so the layout is consistent across every
+  public reading page; it carries its own scoped `rc-*` styles and never touches
+  the DEEP TIME `--dt-*` tokens. The split is purely visual and trivially
+  revertible (it does not alter the citation string or any data).
 - The public `Reference` model (`features/references/model/Reference.ts`) mirrors
   the backend contract: `authors` and `year` are the only universally required
   fields; `title` and `journal` are nullable; complete books store their title in
