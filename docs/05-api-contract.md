@@ -61,7 +61,7 @@
 | `DatingResultController` | `/api/dating-results` |
 | `DatingRecordController` | `/api/admin/dating-records` |
 | `DatingTechniqueController` | `/api/dating-techniques` |
-| `ReferenceController` | `/api/references` |
+| `ReferenceController` / `AdminReferenceController` | `/api/references` · `/api/admin/references` |
 | `FuneraryContextController` | `/api/funerary-contexts` |
 | `StatsController` / `AdminDashboardStatsController` | `/api/stats` · `/api/admin/stats` |
 | `AdminSearchController` | `/api/admin/search` |
@@ -320,7 +320,9 @@ response has `region`, `description`, `features[]`; the embedded form
 
 Default sort `year,desc` then `bibliographicReferenceId,asc`. The public
 `/bibliography` page consumes the paginated envelope — do not type it as a bare
-array.
+array. The admin-only relations lookup
+`GET /api/admin/references/:referenceId/relations` (read-only) lives under
+[Admin lightweight projections](#admin-lightweight-projections--apiadmin---admin).
 
 ## Bone Catalog — `/api/bone-catalog`  ·  [BOTH]
 
@@ -395,6 +397,36 @@ The backoffice uses these to avoid hydrating full entity graphs.
 | GET | `/admin/sites` | Paginated `AdminSiteListResponse` (`archaeologicalContextCount`, `referenceCount`). Filters `q`, `page`, `size`, `sort`. |
 | GET | `/admin/individuals` | Paginated `AdminIndividualListResponse` (`individualType`, `mni`, `mniStatistical`, `archaeologicalContextId`, `boneCount`, `skeletonCount`, `funeraryContextCount`). Filters `q`, `sex`, `ageClassMain`, `individualType`, `archaeologicalContextId`, `page`, `size`, `sort`. |
 | GET | `/admin/bones` | Paginated `AdminBoneListResponse` (`individualCount` — distinct associated individuals — plus `specimenName`, `repository`). The `individualId` filter matches through `bone_individual`. Filters `q`, `boneCatalogId`, `individualId`, `page`, `size`, `sort`. |
+| GET | `/admin/references/:referenceId/relations` | `ReferenceRelationsResponse` — Sites and Archaeological Contexts linked to a reference (read-only). See below. |
+
+### Reference relations — `GET /api/admin/references/:referenceId/relations`  ·  [ADMIN]
+
+Read-only lookup of everything linked to a bibliographic reference through the
+`site_bibliographic_reference` and `archaeological_context_bibliographic_reference`
+join tables. Two bounded projection queries (no nested entity graphs, no N+1).
+
+- `404` when the reference does not exist.
+- Both arrays are **empty** (never `null`) when the reference exists but has no links.
+
+```ts
+interface ReferenceRelationsResponse {
+  referenceId: number;
+  sites: ReferenceRelatedSite[];
+  archaeologicalContexts: ReferenceRelatedArchaeologicalContext[];
+}
+interface ReferenceRelatedSite {
+  siteId: number; siteName: string; country: string; region: string; municipality: string;
+}
+interface ReferenceRelatedArchaeologicalContext {
+  archaeologicalContextId: number; stratigraphicContext: string;
+  siteId: number; siteName: string; country: string;
+  cultureId: number | null; cultureName: string | null;
+}
+```
+
+The backoffice Reference detail page (`/admin/references/:id`) consumes this to render
+its read-only "Linked sites and contexts" panel. Linking/unlinking ownership stays on the
+Site and Archaeological Context detail pages (a present `referenceIds` PATCH there).
 
 ### Global admin search — `GET /api/admin/search`  ·  [ADMIN]
 
