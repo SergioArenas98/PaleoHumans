@@ -310,15 +310,27 @@ client can switch the origin in a single call.
 ## DatasetExportService (`dataset/`)
 
 - Builds the ZIP archive returned by `GET /api/dataset/download`.
-- Writes UTF-8 CSV entries via `CsvWriter`. `bones.csv` no longer has an
-  `individual_id` column; the bone↔individual links are exported as a
-  separate `bone_individuals.csv` bridge file (`bone_id`,
-  `individual_id`), alongside `funerary_context_individuals.csv`.
+- Writes UTF-8 CSV entries via `CsvWriter`, one per scientific table plus one per
+  bridge relation. `bones.csv` no longer has an `individual_id` column; the
+  bone↔individual links are exported as a separate `bone_individuals.csv` bridge
+  file (`bone_id`, `individual_id`), alongside `funerary_context_individuals.csv`,
+  `site_references.csv`, and `archaeological_context_references.csv`.
+- `references.csv` exports the full `bibliographic_reference` row, including
+  `editor`, `book`, `corporate_author`, `city`, `is_book`, and
+  `is_article_in_book` (no nullable fields are silently dropped).
+- Every CSV is written with a header row and a deterministic row order:
+  main tables sorted by primary key via `findAll(Sort)`, bridge/relation rows
+  sorted by their key, so repeated exports of the same data are byte-stable.
+- Bundles three generated entries with the CSVs: `README.md` (researcher-facing
+  scope, citation, and license; see `DatasetReadme`), `manifest.csv`
+  (`file_name`, `source`, `row_count`, `notes` — actual per-file row counts make
+  a missing table obvious), and `metadata.csv` (key-value dataset metadata such
+  as `generated_at_utc`, `license`, `source_article_doi`, `schema_model_version`).
 - Caches the archive bytes for
   `app.dataset.export.cache-ttl-seconds`.
 - Enforces `app.dataset.export.max-bytes` as a hard upper bound.
-- Excludes authentication tables and the
-  `bone_catalog_component` view.
+- Excludes authentication/session tables (`app_user`, `refresh_token`), internal
+  users, deprecated v1 tables, and the `bone_catalog_component` view.
 - Logs `dataset_download` audit events through
   `SecurityAuditService`.
 

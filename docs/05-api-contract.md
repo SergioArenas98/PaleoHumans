@@ -370,14 +370,24 @@ shapes live in `projects/backoffice/src/app/features/users/model/*.ts`.
 
 Returns a ZIP (`application/zip`, `paleohumans-dataset.zip`) of UTF-8 CSV files.
 Entries map one-to-one to domain tables (`sites.csv`, `cultures.csv`,
-`culture_features.csv`, `archaeological_contexts.csv`, `individuals.csv`,
+`culture_features.csv`, `archaeological_contexts.csv`, `individuals.csv`
+(both curated `mni` and generated `mni_statistical`),
 `bone_catalog.csv`, `bones.csv` (no `individual_id` column),
 `bone_individuals.csv` bridge, `skeletons.csv`, `dating_techniques.csv`,
-`dated_samples.csv`, `dating_results.csv`, `references.csv`,
+`dated_samples.csv`, `dating_results.csv` (uncalibrated `dates_bp_uncal`),
+`references.csv` (full `bibliographic_reference` row — `authors`, `year`,
+`title`, `editor`, `book`, `corporate_author`, `city`, `journal`, `volume`,
+`issue`, `pages`, `doi`, `is_book`, `is_article_in_book`),
 `site_references.csv`, `archaeological_context_references.csv`,
-`funerary_contexts.csv`, `funerary_context_individuals.csv`). Excluded:
-`app_user`, `refresh_token`, the `bone_catalog_component` view, and all v1
-tables.
+`funerary_contexts.csv`, `funerary_context_individuals.csv`). Three generated
+entries accompany the CSVs: `README.md` (researcher-facing scope, citation, and
+license), `manifest.csv` (`file_name`, `source`, `row_count`, `notes` — makes a
+missing table obvious), and `metadata.csv` (key-value: `dataset_name`,
+`generated_at_utc`, `source_platform`, `source_article_doi`, `license`,
+`export_format`, `schema_model_version`). Every CSV has a header row and a
+deterministic row order (by primary key, or by bridge key for relation files).
+Excluded: `app_user`, `refresh_token`, the `bone_catalog_component` view, and all
+v1 tables.
 
 Operational: response cached `app.dataset.export.cache-ttl-seconds` (default
 `300`), capped at `app.dataset.export.max-bytes` (default 20 MiB), streamed via

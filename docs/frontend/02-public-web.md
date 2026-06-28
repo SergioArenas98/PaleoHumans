@@ -203,6 +203,7 @@ Loading states:
 ### `/dataset`
 
 - Single export action panel. Button calls `DatasetService.downloadDataset()` and triggers a browser download.
+- The downloaded ZIP bundles the scientific CSV tables, a `README.md` (citation + license), and a `manifest.csv` (file list with row counts); the page copy mentions these.
 - Browser-only; SSR-safe.
 - Linked from the muted header, footer, and a small secondary Home link.
 
