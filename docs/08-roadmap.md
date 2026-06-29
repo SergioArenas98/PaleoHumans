@@ -45,6 +45,15 @@ sides:
 - **Distributed rate limiting.** The in-app `AuthRateLimiter` /
   `PublicEndpointRateLimiter` are JVM-local; a multi-instance deployment needs a
   shared limiter (Redis, gateway, or reverse proxy).
+- **Self-hosted basemap tiles / faster tile provider.** External OpenTopoMap
+  tile latency (1.3-15 s per cold tile, measured) is the dominant perceived cost
+  on `/map` and `/sites/:id`. The frontend has already done what it can without
+  owning the tiles — a static-first map shell, markers decoupled from tile load,
+  a tile-zoom-correct warm-up, and all-subdomain preconnects (see
+  [frontend/05-performance.md](./frontend/05-performance.md#map-and-timeline-loading-strategy)).
+  Removing the latency itself requires self-hosting raster tiles / PMTiles (CDN
+  or edge) or moving to a faster provider. This is an infrastructure decision,
+  not a `projects/web` change.
 
 ## Out of scope (platform level)
 

@@ -52,7 +52,7 @@ Muted:    Dataset · Methodology · About
 
 `Analysis` (`/analysis`) is registered but **not linked** from the nav. It is reachable only by direct URL.
 
-`HeaderComponent` warms the Map page on hover/focus/touch of the nav `Map` link: it dynamically imports the Leaflet chunk and primes the `MapTimelineStats` `shareReplay` cache via `warmMapStats()`.
+`HeaderComponent` warms the Map page on hover/focus/touch of the nav `Map` link: it dynamically imports the Leaflet chunk, primes the `MapTimelineStats` `shareReplay` cache via `warmMapStats()`, and pre-fetches the initial physical (OpenTopoMap) basemap tiles via `warmPhysicalBasemapTiles()`. The tile warm-up targets the exact z5 tiles the live map requests (it opens at fractional zoom 4.5, which Leaflet rounds to z5). MapLibre / the political vector layer is **not** warmed here — it stays lazy. See [05-performance.md → Map and Timeline loading strategy](./05-performance.md#map-and-timeline-loading-strategy).
 
 ## Data loading strategy
 
@@ -84,7 +84,7 @@ Muted:    Dataset · Methodology · About
 ### `/sites/:id` — Site detail
 
 - Hero (left): breadcrumb, site h1, location line, coordinates, KPI strip (Contexts, MNI, Individuals, Dated samples).
-- Hero (right): inline Leaflet mini-map with one marker. Always uses the OpenTopoMap physical base layer; the Physical / Political toggle from MapPage is not exposed here.
+- Hero (right): inline Leaflet mini-map with one marker. Always uses the OpenTopoMap physical base layer; the Physical / Political toggle from MapPage is not exposed here. The mount point shows the shared static map shell (`public/map-shell.svg`) as its background so the panel reads as an intentional map surface immediately instead of a cold grey box while the (external) tiles load. See [05-performance.md](./05-performance.md#map-and-timeline-loading-strategy).
 - Body: archaeological-context cards sorted from oldest culture (`culture.startBp` desc) to most recent. Title prefers `stratigraphicContext`, falls back to `culture.cultureName`, then to "Archaeological context". `archaeologicalContextId` is rendered as small metadata under the title.
 - References: deduplicated list, each rendered as a formatted citation (journal article, article/chapter in book, or complete book — see [`/bibliography`](#bibliography)).
 - Loads only `GET /api/sites/:id` and `GET /api/archaeological-contexts?siteId=`. Does **not** load `/api/stats/map-timeline` or full collection endpoints.

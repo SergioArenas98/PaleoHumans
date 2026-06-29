@@ -57,6 +57,7 @@ These ideas appeared in older exploration documents and have not been committed 
 | Mini-timeline strip on every record page | Stated as a DEEP TIME principle. Partial implementation; not consistently present on Site Details and Individual Details. |
 | Switch to a more scholarly icon set | Material Symbols signal "consumer app". The replacement is not chosen. |
 | Animated chronological marker entrance on the map | Considered in the DEEP FIELD exploration; rejected for SSR risk. Could be revisited as an optional view. (The former per-culture colour palette no longer exists; cultures are neutral.) |
+| Self-hosted basemap tiles / PMTiles (or faster provider) | External OpenTopoMap tile latency (1.3-15 s per cold tile) is the last remaining perceived-performance cost on `/map` and `/sites/:id`. The 2026-06-27 frontend work (static-first map shell, markers decoupled from tile load, tile-zoom-correct warm-up, all-subdomain preconnects — see [05-performance.md](./05-performance.md#map-and-timeline-loading-strategy)) hides the wait but cannot remove provider latency. Self-hosting raster tiles / PMTiles or switching to a faster tile provider is the only structural fix. Cross-cutting infra item — also noted in [../08-roadmap.md](../08-roadmap.md). |
 
 ---
 
