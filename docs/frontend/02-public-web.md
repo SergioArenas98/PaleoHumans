@@ -84,7 +84,7 @@ Muted:    Dataset · Methodology · About
 ### `/sites/:id` — Site detail
 
 - Hero (left): breadcrumb, site h1, location line, coordinates, KPI strip (Contexts, MNI, Individuals, Dated samples).
-- Hero (right): inline Leaflet mini-map with one marker. Always uses the OpenTopoMap physical base layer; the Physical / Political toggle from MapPage is not exposed here. The mount point shows the shared static map shell (`public/map-shell.svg`) as its background so the panel reads as an intentional map surface immediately instead of a cold grey box while the (external) tiles load. See [05-performance.md](./05-performance.md#map-and-timeline-loading-strategy).
+- Hero (right): inline Leaflet mini-map with one marker. Always uses the OpenTopoMap physical base layer; the Physical / Political toggle from MapPage is not exposed here. The mount point shows a plain white background while the (external) tiles load, so the panel never flashes Leaflet's default grey and there is no decorative/cartographic placeholder; the live tiles then paint over it. See [05-performance.md](./05-performance.md#map-and-timeline-loading-strategy).
 - Body: archaeological-context cards sorted from oldest culture (`culture.startBp` desc) to most recent. Title prefers `stratigraphicContext`, falls back to `culture.cultureName`, then to "Archaeological context". `archaeologicalContextId` is rendered as small metadata under the title.
 - References: deduplicated list, each rendered as a formatted citation (journal article, article/chapter in book, or complete book — see [`/bibliography`](#bibliography)).
 - Loads only `GET /api/sites/:id` and `GET /api/archaeological-contexts?siteId=`. Does **not** load `/api/stats/map-timeline` or full collection endpoints.
