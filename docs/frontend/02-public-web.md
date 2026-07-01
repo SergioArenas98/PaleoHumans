@@ -1,21 +1,25 @@
 # 05 — Public Web (`projects/web`)
 
-The public site at `projects/web` is the research database UI: read-only, fully public, SSR-prerendered where possible.
+The public site at `projects/web` is the research database UI: read-only, fully
+public, and currently deployed to Vercel as a prerendered/static browser output
+with live client refetches after hydration. Angular still emits an SSR server
+bundle, but the public Vercel project currently serves `dist/web/browser` and
+does not route requests to that server bundle.
 
 ## Route map
 
 | Route | Component | Render mode | Services called |
 |---|---|---|---|
 | `/` | `HomePage` | Prerender | `HomeStatsService`, `SiteService.getAll({ size: 12 })` |
-| `/sites` | `SitesPage` | Prerender | `SiteService.getAll`, `SiteService.getAllItems` (country fallback), `SiteService.getCountries` |
-| `/sites/:id` | `SiteDetailsPage` | Server | `SiteService.getById`, `ArchaeologicalContextService.searchBySite` |
+| `/sites` | `SitesPage` | Prerender | `SiteService.getList`, `SiteService.getCountries` |
+| `/sites/:id` | `SiteDetailsPage` | Server config; CSR fallback on current Vercel | `SiteService.getById`, `ArchaeologicalContextService.searchBySite` |
 | `/individuals` | `IndividualsPage` | Prerender | `IndividualService.getList` (or `.search`) |
-| `/individuals/:id` | `IndividualDetailPageComponent` | Server | `IndividualService.getById`, `BoneService.findByIndividual`, `SkeletonService.search`, `ArchaeologicalContextService.getById`, `DatedSampleService.search` |
+| `/individuals/:id` | `IndividualDetailPageComponent` | Server config; CSR fallback on current Vercel | `IndividualService.getById`, `BoneService.findByIndividual`, `SkeletonService.search`, `ArchaeologicalContextService.getById`, `DatedSampleService.search` |
 | `/map` | `MapPage` | Prerender | `MapTimelineStatsService.getMapTimelineStats` |
 | `/timeline` | `TimelinePage` | Prerender | `MapTimelineStatsService.getMapTimelineStats`, `CultureService.getAll` |
 | `/bibliography` | `BibliographyPageComponent` (lazy) | Prerender | `ReferenceService.getAll` |
 | `/bones` | `BonesPage` (lazy) | Prerender | `BoneSiteSearchService.search` |
-| `/analysis` | `AnalysisPage` (lazy) | Server | `IndividualService.getAllItems({ size: 200 })` (paginated sweep) |
+| `/analysis` | `AnalysisPage` (lazy) | Server config; CSR fallback on current Vercel | `IndividualService.getAllItems({ size: 200 })` (paginated sweep) |
 | `/methodology` | `MethodologyPage` | Prerender | — (static content) |
 | `/about` | `AboutPage` | Prerender | — (static content) |
 | `/dataset` | `DatasetPageComponent` (lazy) | Prerender | `DatasetService.downloadDataset` (on user click) |
@@ -57,7 +61,7 @@ Muted:    Dataset · Methodology · About
 ## Data loading strategy
 
 - **No route resolvers** anywhere in the public web. Routes activate immediately and components subscribe after activation. The blocking "Loading..." card on slow pages is delayed by the shared `DelayedLoadingState` helper (`projects/web/src/app/utils/delayed-loading-state.ts`, default threshold 300 ms; SSR-safe).
-- **SSR transfer cache is enabled.** `provideClientHydration(withEventReplay())` is set in `app.config.ts`; SSR/SSG-fetched payloads survive hydration. This depends on the backend returning correct `Cache-Control` headers (see [05-performance.md](./05-performance.md)).
+- **HTTP transfer cache is disabled.** `provideClientHydration(withEventReplay(), withNoHttpTransferCache())` is set in `app.config.ts`. The public Vercel project serves prerendered `dist/web/browser` output, so transfer-cached HTTP responses would be build-time snapshots. Disabling the HTTP transfer cache lets the browser refetch live API data after hydration. The backend serves anonymous public reads with `Cache-Control: no-cache`, so those refetches revalidate against origin.
 - **Retry interceptor** (`projects/web/src/app/core/interceptors/retry-interceptor.ts`) retries idempotent failed GETs.
 
 ## Per-page detail
@@ -70,16 +74,16 @@ Muted:    Dataset · Methodology · About
   3. Research access triptych: geographic / biological / chronological cards.
 - Optional "Database last updated" line, shown only when the backend supplies `HomeStats.lastUpdatedAt`. The frontend never fabricates a date.
 - Stats source of truth: `GET /api/stats/home`. The Home page must **not** reconstruct counts from collection endpoints.
+- The site ticker calls `SiteService.getAll(..., { forceRefresh: true })` so the visible homepage does not reuse a warmed site-list cache entry.
 
 ### `/sites` — Sites list
 
 - Paginated site card grid (default `pageSize = 20`).
 - Backend-supported text search (`q`) and country dropdown.
 - Sort: site name only.
-- Two-mode data flow:
-  - **No country selected:** `SiteService.getAll({ q, page, size, sort })` — backend pagination.
-  - **Country selected:** `SiteService.getAllItems({ size: 100 })` cached once, filtered locally by country and `q`, paginated locally with `pageArray()`.
-- The country options come from `SiteService.getCountries()` (`GET /api/sites/countries`). When the backend `country` filter is present (now available), the page may move fully to backend-driven mode; the local sweep is the fallback.
+- Data flow is backend-driven through `SiteService.getList({ q, country, page, size, sort }, { forceRefresh: true })`.
+- The country options come from `SiteService.getCountries({ forceRefresh: true })` (`GET /api/sites/countries`) on page activation.
+- `SiteService` keeps a short-lived, query-keyed in-memory cache for warm preloads/helper calls only. Visible `/sites` loads bypass it.
 
 ### `/sites/:id` — Site detail
 
@@ -97,6 +101,7 @@ Muted:    Dataset · Methodology · About
 - Active-filter indicator with "Clear all".
 - Click row → `/individuals/:id`.
 - Public list uses `GET /api/individuals/list` (lightweight projection). The full `Individual` endpoint is reserved for the detail page.
+- Visible `/individuals` loads pass `forceRefresh=true`. `IndividualService` keeps a short-lived, query-keyed in-memory cache for warm preloads/helper calls only.
 
 ### `/individuals/:id` — Individual detail
 
@@ -128,6 +133,7 @@ Loading states:
 - Click a marker → right-hand site preview panel (totals, culture chips, dominant culture). Click empty map → close panel.
 - Marker design is shared with the SiteDetailsPage mini-map via `projects/web/src/app/utils/map-markers.ts`. Markers are neutral — cultures carry no colour anywhere in the public web (filters identify cultures by name/id only).
 - Data source: **only** `GET /api/stats/map-timeline`. Do not load unfiltered `/api/archaeological-contexts`.
+- `/map` passes `forceRefresh=true` to `MapTimelineStatsService` on activation so a Home/Header warm-up cannot keep a stale aggregate snapshot visible for the cache TTL window.
 
 ### `/timeline` — Timeline
 
@@ -136,6 +142,7 @@ Loading states:
 - Zoom slider (100–400 %).
 - Click dot → right-side site detail panel; "Open site" link navigates to `/sites/:id`.
 - Data source: `GET /api/stats/map-timeline` is the source of truth; `GET /api/cultures` is called only to enrich the secondary culture cards (`description`, `region`, `features`).
+- `/timeline` passes `forceRefresh=true` for both reads so culture/site edits show on activation/hydration with no in-memory cache wait.
 
 ### `/bones` — Bones (site-first search)
 
@@ -151,6 +158,7 @@ Loading states:
 - Backend `q` search, page-size selector, prev/next.
 - Results grouped by exact publication year within the currently loaded page (newest year first; references with no year fall under an `Unknown year` group).
 - Lazy-loaded route (`loadComponent`).
+- Visible `/bibliography` loads pass `forceRefresh=true`. `ReferenceService` keeps a short-lived, query-keyed in-memory cache for warm preloads/helper calls only.
 - Each reference renders as a formatted citation via the local helper
   `features/references/reference-citation.ts`, which selects one of three project
   citation shapes from the `isBook` / `isArticleInBook` flags:
@@ -198,7 +206,7 @@ Loading states:
 - The most complex page in the app. Multi-select chip filters (country, culture phase, culture, sex, age class, individual type, burial type), chart config panel, Chart.js charts (bar/timeline/heatmap/scatter), inferential stats (χ², Cramér's V, Pearson r, descriptive stats), CSV export.
 - Data flow: `IndividualService.getAllItems({ size: 200 })` (paginated sweep) → derives site, culture, individual type, and funerary data from each individual's embedded summaries.
 - **Uses legacy `*ngIf`/`*ngFor`.** Other pages use `@if`/`@for`. See [07-roadmap.md](./07-roadmap.md).
-- Render mode: `Server` (build-time prerender would time out on the API).
+- Render mode: configured as `Server`, but current Vercel static hosting rewrites `/analysis` to `/index.csr.html`. It is therefore client-rendered in production until the public project is changed to deploy the Angular SSR server function.
 
 ### `/dataset`
 

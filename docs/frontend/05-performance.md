@@ -6,11 +6,11 @@ This document records the **current performance shape** of the public web, inclu
 
 ## Architectural posture
 
-- **SSG/SSR via `@angular/build:application`**, `outputMode: server`.
-- **Per-route render mode** declared in `app.routes.server.ts`. Most routes are prerendered; `/sites/:id`, `/individuals/:id`, and `/analysis` are `RenderMode.Server`. See [01-frontend-architecture.md](./01-frontend-architecture.md).
-- **Hydration transfer cache enabled.** `provideClientHydration(withEventReplay())` is set; the older `withNoHttpTransferCache()` opt-out was removed. SSR/SSG-fetched payloads survive hydration when the API returns the correct `Cache-Control`.
+- **SSG/static production posture on Vercel.** The Angular build uses `@angular/build:application` with `outputMode: server`, so it emits both browser output and `dist/web/server/server.mjs`; the current public Vercel project serves only `dist/web/browser`.
+- **Per-route render mode** is declared in `app.routes.server.ts`. Known list/static routes are `RenderMode.Prerender`. `/sites/:id`, `/individuals/:id`, and `/analysis` remain `RenderMode.Server` in Angular config, but current Vercel static hosting reaches them through `frontend/vercel.json` rewrites to `/index.csr.html`, not through the SSR server function. See [01-frontend-architecture.md](./01-frontend-architecture.md).
+- **HTTP transfer cache disabled.** `provideClientHydration(withEventReplay(), withNoHttpTransferCache())` is set so browser hydration refetches live API data instead of reusing build-time prerender payloads. This relies on backend public reads using `Cache-Control: no-cache`.
 - **Retry interceptor** for idempotent GETs in `projects/web/src/app/core/interceptors/retry-interceptor.ts`.
-- **Service-level in-memory caches:** `MapTimelineStatsService.getMapTimelineStats()` and `CultureService.getAll()` use `shareReplay({ bufferSize: 1, refCount: false })`. `SiteService` (after the 2026-05-12 audit) maintains a bounded **query-keyed cache** of `getAll` / `getList` results plus a single-shot `getCountries()` cache, so a navigation from `/` to `/sites` that was pre-warmed by HomePage hits the cache synchronously and skips the blocking loader.
+- **Service-level in-memory caches:** `MapTimelineStatsService.getMapTimelineStats()` and `CultureService.getAll()` use `shareReplay({ bufferSize: 1, refCount: false })` with a 60 s TTL plus explicit `forceRefresh` paths on live pages. `SiteService`, `IndividualService`, and `ReferenceService` maintain bounded query-keyed caches with a 60 s TTL for warm preloads/helper calls only; visible public data-page loads pass `forceRefresh`.
 
 ## Heavy endpoints (current)
 
@@ -49,11 +49,10 @@ Reconstructing these values from collection endpoints (full sweeps of `/api/site
 
 ## Sites list cache and preload
 
-- **HomePage warms the same query SitesPage will issue.** `HomePage.warmSitesPagePreload()` calls `SiteService.warmSitesFirstPage()` (page 0, size 20, `siteName,asc` — the exact SitesPage default) plus `SiteService.getCountries()`. Both share an in-memory `shareReplay` cache.
-- **SitesPage skips the blocking loader on a warm cache hit.** `loadSites()` calls `SiteService.hasCachedQuery(...)` before starting the `DelayedLoadingState`; on a cache hit the data swap is synchronous and the 300 ms loader never enters the DOM.
-- **Country dropdown is hydrated synchronously** from `SiteService.getCachedCountries()` when warm, so the dropdown is populated on first paint.
-- **Search / pagination / sorting / country filters all flow through the same cache key** (`q | country | page | size | sort`). Re-visiting a page already viewed in the session is therefore free, while filter / search changes still issue a fresh request.
-- The cache is bounded to 24 entries (a recent-history LRU); past that the oldest entry is evicted, so a long browsing session does not retain hundreds of stale subscriptions.
+- **HomePage ticker and SitesPage activation force-refresh.** The visible homepage ticker calls `SiteService.getAll(..., { forceRefresh: true })`; visible `/sites` calls `SiteService.getList(..., { forceRefresh: true })` and `SiteService.getCountries({ forceRefresh: true })`.
+- **Warm site preloads remain non-visible.** `HomePage.warmSitesPagePreload()` still uses `SiteService.warmSitesFirstPage()` plus `SiteService.getCountries()` as bounded speculative/helper calls, but visible data pages do not consume those cache entries as the freshness source.
+- **Search / pagination / sorting / country filters all flow through the same cache key** (`q | country | page | size | sort`) for helper/preload de-duplication.
+- The cache is bounded to 24 entries (a recent-history LRU) and entries expire after 60 seconds; past the bound the oldest entry is evicted. It is no longer used as the source of truth for visible public data-page loads.
 
 ## Map and Timeline loading strategy
 
@@ -67,7 +66,7 @@ Reconstructing these values from collection endpoints (full sweeps of `/api/site
 - **Basemap fade-in.** Physical uses OpenTopoMap raster tiles; Political uses OpenFreeMap vector tiles through MapLibre GL Leaflet. New base layers start visually hidden and fade in after the Leaflet tile event or MapLibre GL load/error event fires, with a 2.5 s safety timeout. Raster tiles set `updateWhenZooming: false` (skips throwaway intermediate-zoom requests during the fractional-zoom animation) in `utils/base-map-layer.ts`; provider, URL, and attribution unchanged. `keepBuffer` is intentionally left at Leaflet's default of 2 — a browser smoke test confirmed it does not change the initial tile-request count (it only governs off-screen tile retention while panning, in `GridLayer._pruneTiles`), so raising it adds memory pressure with no cold-load benefit.
 - **Warm-up targets the real initial tile zoom.** The live map opens at fractional zoom 4.5; Leaflet rounds tile requests to `Math.round(4.5) = z5`. The warm-up previously fetched **z4** tiles the live map never requested, so a "warm" cold-open still paid full tile latency. `EUROPE_INITIAL_CENTER` / `EUROPE_INITIAL_ZOOM` / `EUROPE_INITIAL_TILE_ZOOM` now live in `projects/web/src/app/utils/map-viewport.ts` and are the single source of truth for both the live map and the warm-up, so the warm-up primes the exact z5 tile block the map paints first.
 - **Nav-intent warm-up.** Hovering / focusing / touching the `Map` nav link triggers `warmLeafletChunk()`, `warmMapStats(...)`, and `warmPhysicalBasemapTiles()` (`projects/web/src/app/utils/map-preload.ts`); the last warms a small z5 OpenTopoMap block around the initial view. All are idempotent, browser-only, and respect Save-Data / slow-2g. **MapLibre / the political vector layer stays lazy** — it is only pre-warmed by HomePage during idle (`warmBasemaps()`), never on the header hover path or the default physical render. `index.html` preconnects all three OpenTopoMap subdomains (`a`/`b`/`c`, loaded in parallel) and keeps OpenFreeMap on a lighter `dns-prefetch`.
-- **MapTimelineStatsService caches via `shareReplay({ bufferSize: 1, refCount: false })`.** Live until page reload. `/sites/:id` does **not** request `/api/stats/map-timeline`.
+- **MapTimelineStatsService caches via `shareReplay({ bufferSize: 1, refCount: false })`.** The cache has a 60 s TTL for warm navigation/preload hand-off. `/map` and `/timeline` pass `forceRefresh=true` on activation so the main live aggregate views bypass warm snapshots; `/sites/:id` does **not** request `/api/stats/map-timeline`.
 
 > **Pre-change baseline (CDP audit, local):** cold `/map` — Leaflet container ~1.38 s, first tile request ~1.38 s, first tile painted ~2.54 s, markers ~3.37 s (one outlier pass: no tiles/markers after 9 s). Cold `/sites/1` mini-map — first tile ~3.38 s.
 >
@@ -91,14 +90,14 @@ Documented progressively-loading pattern:
 4. **Do not fabricate `lastUpdatedAt`.** If the backend does not supply it, the line is hidden. Do not derive it from a partial collection scan.
 5. **Do not type `/bones?individualId=` as `PaginatedResponse`.** Use `BoneService.findByIndividual()`, which expects a `Bone[]` array shape.
 6. **Do not block first paint on heavy collections.** Stats endpoints first, enrichment after.
-7. **Respect `RenderMode.Server` on parametric routes.** Switching `/sites/:id` and `/individuals/:id` to `Prerender` requires either `getPrerenderParams` for the full set or a build-time API contract that can serve every id. Either is a deliberate decision, not a flip.
-8. **Service caches are in-memory.** `shareReplay` does not persist across reloads. Adding `localStorage` / `sessionStorage` / Service Worker caches would alter SSR semantics.
+7. **Do not rely on `RenderMode.Server` in production unless Vercel SSR routing is changed and verified.** The current public project serves `dist/web/browser`; dynamic page hard refreshes are kept alive by explicit CSR fallback rewrites. Switching more routes to `Server` under the current dashboard settings can reintroduce platform 404s.
+8. **Service caches are in-memory and time-bounded.** `shareReplay` does not persist across reloads. Adding `localStorage` / `sessionStorage` / Service Worker caches would alter freshness semantics.
 
 ## Known regressions to watch for
 
 When any of these patterns reappear, treat it as a regression:
 
-- A page that re-fetches a value already SSG-baked into its HTML on first paint.
+- A page relying on Angular HTTP transfer cache for public API payloads under the current static Vercel deployment.
 - A non-map page importing map library structural CSS.
 - A page calling `IndividualService.getAllItems({ size: 200 })` outside `/analysis`.
 - A page deriving Home stats from `/api/sites` and `/api/individuals` instead of `/api/stats/home`.
@@ -119,7 +118,7 @@ When any of these patterns reappear, treat it as a regression:
 
 These items are out of scope for `projects/web` but their absence has a direct, measurable impact on perceived performance. They are tracked here so future agents do not chase them in the frontend.
 
-1. **No `Cache-Control: public, max-age=…` on read-only endpoints.** Without it the hydration transfer cache cannot survive a hard reload and edge caches cannot help. Largest visible cost: `GET /api/stats/map-timeline` (~130 KB) re-downloads on every map visit.
+1. **No validator-based revalidation (`ETag` / `Last-Modified`) on public read endpoints.** The current correct policy is `Cache-Control: no-cache` so public refetches revalidate after backoffice edits; validators would make those revalidations cheaper without allowing stale data.
 2. **No `Content-Encoding: br` / `gzip` on JSON.** The map/timeline stats payload (~130 KB), bone-site-search (~110 KB), and the `/analysis` sweep (~2.5 MB total) all ship uncompressed. Compression would cut wire bytes by 5-10x.
 3. **No `GET /api/individuals/{id}/bundle`.** Phase-3 fan-out on individual detail still issues `N + linked-skeleton + 1` `dated-samples` requests in parallel. Collapsing into a single bundle endpoint is the single highest-impact backend change for that page.
 4. **No `GET /api/stats/analysis`.** `/analysis` still sweeps `/api/individuals` four times (≈2.5 MB total) to compute statistics. A per-chart aggregate endpoint would shrink this to one small request.
@@ -127,5 +126,5 @@ These items are out of scope for `projects/web` but their absence has a direct, 
 
 ## Out of scope here
 
-- Backend response compression, `Cache-Control` strategy, and SSR edge caching live in the `backend/` service and the deployment platform (Vercel / Railway). They are flagged in the "Backend / deployment blockers" section above because they directly affect the frontend, but they are not modifiable from `projects/web`. See [../backend/05-performance-and-pagination.md](../backend/05-performance-and-pagination.md).
+- Backend response compression, validator-based cache revalidation, and SSR edge routing live in the `backend/` service and the deployment platform (Vercel / Railway). They are flagged in the "Backend / deployment blockers" section above because they directly affect the frontend, but they are not modifiable from `projects/web`. See [../backend/05-performance-and-pagination.md](../backend/05-performance-and-pagination.md).
 - Lighthouse / WebPageTest field metrics. The audit referenced above is HTTP-trace-based and code-based, not field-measured.

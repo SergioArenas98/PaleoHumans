@@ -54,18 +54,40 @@ Tests run on **Vitest** via `@angular/build:unit-test`.
 
 ## Rendering model
 
-Both apps build with `@angular/build:application` and `outputMode: server`, so an SSR Node entry is produced. The **per-route rendering mode** for the public web is defined in `projects/web/src/app/app.routes.server.ts`:
+Both apps build with `@angular/build:application` and `outputMode: server`, so
+Angular emits both browser output and an SSR Node entry. The deployed public web
+is currently static-first on Vercel: the public project root is `frontend`, the
+build command is `npm run build:web`, and the dashboard Output Directory is
+`dist/web/browser`. That means production serves the browser output directly;
+it does not route public requests to `dist/web/server/server.mjs`.
 
-| Route | Render mode | Rationale |
+The public web render modes in `projects/web/src/app/app.routes.server.ts` are:
+
+| Route | Angular render mode | Current Vercel behavior |
 |---|---|---|
-| `sites/:id` | `RenderMode.Server` | Parametric; rendered on demand. |
-| `individuals/:id` | `RenderMode.Server` | Parametric; rendered on demand. |
-| `analysis` | `RenderMode.Server` | Data-heavy; avoids long build-time API calls. |
-| `**` (everything else) | `RenderMode.Prerender` | Static prerender at build time. |
+| `/`, `/sites`, `/individuals`, `/bones`, `/map`, `/timeline`, `/bibliography`, `/dataset`, `/methodology`, `/about` | `RenderMode.Prerender` | Real route HTML is emitted under `dist/web/browser` and served statically. |
+| `/sites/:id`, `/individuals/:id`, `/analysis` | `RenderMode.Server` | Not routed to the SSR server under the current Output Directory; `frontend/vercel.json` rewrites these paths to `/index.csr.html` so hard refresh works as a CSR fallback. |
+| `/explore`, `/chronology` | `RenderMode.Server` redirect config | Production redirects are duplicated in `frontend/vercel.json` because the SSR redirect response is not used by static hosting. |
+| retired v1 URLs and `**` | `RenderMode.Server` status config | Useful in local SSR preview; production static hosting cannot return these Angular SSR status codes unless Vercel SSR routing is enabled. |
 
-SSR is **non-negotiable** for SEO. Browser-only APIs (`window`, `document`, `localStorage`, Leaflet, `IntersectionObserver`) must be guarded with `isPlatformBrowser(PLATFORM_ID)`.
+Real Vercel SSR is still the preferred long-term SEO target for dynamic detail
+pages, but it requires a deployment change: the public project must deploy the
+Angular SSR output/function instead of only `dist/web/browser`, and the CSR
+fallback rewrites for dynamic pages must be removed or replaced by framework
+SSR routing. Do not switch additional routes to `RenderMode.Server` while the
+dashboard still serves only `dist/web/browser`; previous attempts produced
+Vercel platform 404s on hard reload.
 
-The public web enables `provideClientHydration(withEventReplay())` in `app.config.ts`. The previous opt-out via `withNoHttpTransferCache()` was removed; SSR/SSG-fetched payloads now survive hydration. This depends on the backend returning correct `Cache-Control` headers (see [05-performance.md](./05-performance.md)).
+Browser-only APIs (`window`, `document`, `localStorage`, Leaflet,
+`IntersectionObserver`) must be guarded with `isPlatformBrowser(PLATFORM_ID)`.
+
+The public web deliberately uses
+`provideClientHydration(withEventReplay(), withNoHttpTransferCache())` in
+`app.config.ts`. Because production is static/prerendered, Angular TransferState
+would replay build-time API payloads after hydration. Disabling the HTTP
+transfer cache makes the browser refetch live API data after hydration; the
+backend serves anonymous public reads with `Cache-Control: no-cache`, so those
+refetches revalidate instead of replaying stale browser/CDN entries.
 
 ## Backend
 
