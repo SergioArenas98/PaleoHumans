@@ -128,7 +128,40 @@ spring.jpa.hibernate.ddl-auto=none
 PostgreSQL-specific named enum types, a `STORED` generated column,
 and the `bone_catalog_component` view, which H2 cannot represent
 faithfully. Tests that need that fidelity should run against a real
-PostgreSQL instance (Testcontainers).
+PostgreSQL instance (Testcontainers) — see the next section.
+
+### PostgreSQL integration tests (Testcontainers)
+
+`db/PostgresSchemaIntegrityIT` loads the authoritative
+`src/main/resources/db/database.sql` into a PostgreSQL Testcontainers
+container (only the `CREATE DATABASE` wrapper is stripped by
+`db/PostgresSchemaLoader`; every table, enum, view, trigger,
+constraint, and index runs verbatim) and verifies the invariants H2
+cannot: real schema bootstrap, the generated `mni_statistical`
+column, the `bone_catalog_component` view, the `dated_sample` CHECK
+constraints, the remains-exclusivity triggers, and the
+one-skeleton-per-individual unique index.
+
+The suite is **opt-in** and requires Docker. Normal tests are
+unchanged and stay Docker-free:
+
+```bash
+# Normal test suite (H2, no Docker)
+./mvnw test          # macOS/Linux
+mvnw.cmd test        # Windows
+
+# PostgreSQL integration tests (Docker required; runs the H2 suite first)
+./mvnw -Ppostgres-it verify          # macOS/Linux
+mvnw.cmd -Ppostgres-it verify        # Windows
+
+# ITs only — faster, and skips the H2 suite (useful when the known
+# full-suite H2 isolation flake would abort the build before failsafe)
+./mvnw -Ppostgres-it test-compile failsafe:integration-test failsafe:verify    # macOS/Linux
+mvnw.cmd -Ppostgres-it test-compile failsafe:integration-test failsafe:verify  # Windows
+```
+
+Classes named `*IT` are run by `maven-failsafe-plugin` under the
+`postgres-it` Maven profile only; surefire never picks them up.
 
 Existing test coverage (see `src/test/java/...`):
 
