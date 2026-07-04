@@ -37,10 +37,12 @@ individuals together.
 
 **Schema management is manual.** `dev` and `production` use
 `spring.jpa.hibernate.ddl-auto=validate`: Hibernate validates the schema on
-startup and refuses to mutate it. There is no Flyway or Liquibase configuration;
-ad-hoc migration scripts live in `backend/src/main/resources/db/migrations/`.
-The `test` profile uses `ddl-auto=none` with H2 in PostgreSQL compatibility
-mode.
+startup and refuses to mutate it. There is no Flyway or Liquibase configuration
+and no migrations directory or runner; schema changes are made directly in the
+authoritative `database.sql` and applied by hand, and any audit SQL that should
+run before applying a new constraint is kept inline in that file next to the
+constraint it guards. The `test` profile uses `ddl-auto=none` with H2 in
+PostgreSQL compatibility mode.
 
 Stack:
 

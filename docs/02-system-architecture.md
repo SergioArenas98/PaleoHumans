@@ -56,8 +56,7 @@ Paleohumans_project/
 │   ├── mvnw / mvnw.cmd      # Maven wrapper
 │   ├── run-backend.ps1      # Windows convenience launcher
 │   └── src/main/resources/db/
-│       ├── database.sql     # Authoritative PostgreSQL schema
-│       └── migrations/      # Ad-hoc migration scripts
+│       └── database.sql     # Authoritative PostgreSQL schema (applied manually)
 ├── docs/                    # Canonical knowledge base (this folder)
 │   ├── 01..08-*.md          # Platform-wide docs
 │   ├── frontend/            # Frontend-workspace docs

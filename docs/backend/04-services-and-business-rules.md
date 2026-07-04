@@ -153,9 +153,9 @@ that attaches remains to an `Individual`:
   (`trg_bone_remains_exclusivity`, `trg_skeleton_remains_exclusivity`).
   These close the race window and protect direct DB writes;
   `GlobalExceptionHandler` maps the resulting SQLSTATE `23505`/`23514`
-  back to the same Problem Detail. For an existing populated database, run
-  the audit + apply script
-  `db/migrations/2026_06_individual_remains_exclusivity.sql` first —
+  back to the same Problem Detail. Schema management is manual (no migrations
+  runner exists): for an existing populated database, run the audit queries
+  inlined in `database.sql` next to the exclusivity index/triggers first —
   conflicting rows are surfaced, never auto-fixed.
 
 ## BoneCatalogService (`bone_catalog/`)
