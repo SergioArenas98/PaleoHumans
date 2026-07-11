@@ -155,10 +155,26 @@ Default sort `archaeologicalContextId,asc`. Response embeds `site`, `culture`,
 | GET | `/individuals/list` | same filters | `PaginatedResponse<IndividualSummary>` | [PUBLIC] |
 | GET | `/individuals/:id` | — | `Individual` | [BOTH] |
 | POST/PATCH/DELETE | `…[/:id]` | — | `Individual` / `void` | [ADMIN] |
+| POST | `/individuals/:id/move-context` | body `{ archaeologicalContextId }` | `Individual` | [ADMIN] |
 
 Default sort `individualId,asc`. `/individuals` returns the full nested payload
 (heavy); the public list page should prefer the lightweight
-`/individuals/list` projection. `sex` is a strict enum
+`/individuals/list` projection.
+
+**Move to another context.** `POST /individuals/:id/move-context` reassigns an
+individual to another **existing** archaeological context (the body carries only
+the destination id — the rest of the record is preserved). An individual must
+always belong to exactly one context, so the destination is mandatory and must
+differ from the current one (`400` otherwise); a missing individual or
+destination is `404`. The move is **blocked** (nothing is mutated, `409` with
+code `INDIVIDUAL_CONTEXT_REASSIGNMENT_BLOCKED` and a `blockingFuneraryContexts`
+array) when the individual still belongs to a funerary context that lives in a
+different archaeological context — a burial grouping's members must share its
+context, so the membership must be resolved first. The individual's bones,
+skeleton and their dating records travel with it; context-level dating records
+stay with the source context. The same guard also runs on `PATCH /individuals/:id`
+when it changes `archaeologicalContextId`, so the inconsistent state cannot be
+created through the general edit form either. `sex` is a strict enum
 (`MALE`/`FEMALE`/`INDETERMINATE`); combined with the `sexCertain` Boolean it
 powers the UI options `Male`, `Male?`, `Female`, `Female?`, `Indeterminate`,
 `Indeterminate?`. There is **no `cultureId` or `country` filter** on

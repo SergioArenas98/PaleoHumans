@@ -158,6 +158,41 @@ that attaches remains to an `Individual`:
   inlined in `database.sql` next to the exclusivity index/triggers first —
   conflicting rows are surfaced, never auto-fixed.
 
+### Moving an individual between archaeological contexts
+
+`IndividualService.moveContext(id, destinationContextId)` (exposed as
+`POST /individuals/:id/move-context`) reassigns an individual's mandatory
+`ArchaeologicalContext`. An individual must always belong to **exactly one**
+context, so there is no unlink/orphan form: the destination is required, must
+exist (`404` otherwise) and must differ from the current context (`400`).
+
+> **Scientific-consistency rule.** A `FuneraryContext` is a burial grouping
+> **inside** a single archaeological context, so its member individuals must
+> share that context. The move is therefore **blocked** — nothing is mutated —
+> when the individual still belongs to any funerary context whose archaeological
+> context differs from the destination. This is a *block*, not a silent detach:
+> the editor must first remove the individual from those funerary contexts.
+
+- The guard (`assertNoBlockingFuneraryContexts`) reads the individual's funerary
+  memberships with their owning context via
+  `FuneraryContextRepository.findMembershipsByIndividualId` and throws
+  `IndividualContextReassignmentBlockedException`, mapped by
+  `GlobalExceptionHandler` to HTTP `409` with the stable code
+  `INDIVIDUAL_CONTEXT_REASSIGNMENT_BLOCKED` and a `blockingFuneraryContexts`
+  array (see [03-validation-and-errors.md](./03-validation-and-errors.md)).
+- Validation and the write to the individual's own context run in the same
+  `@Transactional` method, so the check-then-set is atomic for that row. No
+  extra row locking is taken: the individual lock would not prevent the only real
+  race (a concurrent funerary-membership add via the `FuneraryContext` side), and
+  concurrent moves are last-write-wins without inconsistency.
+- **Related records are left untouched.** Bones (context-independent, shared via
+  `bone_individual`) and the individual's skeleton travel with the individual;
+  their bone-/skeleton-level dating records are unaffected, and context-level
+  dating records stay attached to the source context.
+- The **same guard also runs on `IndividualService.update`** whenever a `PATCH`
+  changes `archaeologicalContextId`, so the inconsistent state cannot be created
+  through the general edit form either.
+
 ## BoneCatalogService (`bone_catalog/`)
 
 - Search, hierarchical browsing through `parentBoneCatalogId`, and

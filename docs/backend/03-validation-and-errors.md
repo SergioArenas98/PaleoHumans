@@ -217,6 +217,7 @@ Validation errors add a `fieldErrors` property:
 | `MethodArgumentNotValidException` | 400 | "Validation error" (+ `fieldErrors`) |
 | `IllegalArgumentException` | 400 | "Bad request" |
 | `RemainsExclusivityException` | 409 | "Conflicting remains for individual" (+ `code`, `fieldErrors.individualId`, `individualId`) |
+| `IndividualContextReassignmentBlockedException` | 409 | "Move blocked by related records" (+ `code` `INDIVIDUAL_CONTEXT_REASSIGNMENT_BLOCKED`, `blockingFuneraryContexts[]`, `fieldErrors.archaeologicalContextId`, `individualId`) |
 | `DatingRecordValidationException` | 422 | "Invalid dating record" (+ stable `code`, `fieldErrors`) |
 | `SelfActionForbiddenException` | 409 | "Self-action not allowed" (+ stable `code`, optional `fieldErrors`) |
 | `PasswordChangeException` | 422 | "Invalid password change" (+ stable `code`, `fieldErrors`) |
