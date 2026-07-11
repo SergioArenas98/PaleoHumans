@@ -75,7 +75,7 @@ Every list page uses the lightweight `/api/admin/<entity>` projection where one 
 
 Detail pages use the full `/api/<entity>/{id}` to populate the form. On save they call PATCH; payloads go through `cleanPatch` (`features/shared/utils/clean-patch.ts`) so absent keys mean no-op, explicit `null` means clear, and present values overwrite (matching the backend's `JsonNullable` semantics).
 
-Create pages call POST and navigate to the new detail page on success.
+Create pages call POST and navigate to the new detail page on success (or to a valid `returnTo` when opened from a related record — see [Contextual return navigation](#contextual-return-navigation-returnto)).
 
 ## Relational editing
 
@@ -98,6 +98,14 @@ Create pages call POST and navigate to the new detail page on success.
 > **Bone ↔ Individual editing.** The bone create form requires **at least one** individual; the detail form edits the full set. On PATCH, a present non-empty `individualIds` array **replaces the whole association set** (replace-set semantics, matching the backend's `JsonNullable`); an empty selection is rejected. The admin list (`AdminBoneListResponse`) surfaces `individualCount`, not a single individual. Skeletons remain a single-`individualId` FK at creation.
 
 The dating editor (`/admin/dating/:id`) is a unified form for the `DatedSample` + `DatingResult` record via `DatingRecordService` (`projects/backoffice/src/app/features/dating/dating-record.service.ts`), a thin client over the transactional `/api/admin/dating-records` aggregate endpoint. Create, update (PATCH; a present `datingResults` replaces the whole child set) and delete are each a single atomic backend call — the record can no longer be left partial.
+
+The bone detail page (`/admin/bones/:id`) shows an **Associated dating records** section that loads every dating record for the bone in one filtered request (`GET /api/admin/dating-records?boneId=`, `BoneDatingSectionComponent`). It is loaded independently of the bone form (a failure never blocks editing) and refetches whenever the page is (re)created, so it is never stale after a create/edit/delete. "Add dating record" links to `/admin/dating/new?boneId=…`, and the equivalent context/skeleton flows exist on their detail pages.
+
+## Contextual return navigation (`returnTo`)
+
+When a create/edit page is opened from a related record, the origin appends its own internal URL as a `returnTo` query parameter (e.g. `/admin/dating/new?boneId=5&returnTo=%2Fadmin%2Fbones%2F5`). The destination's **Save / Cancel / Back / Delete** then navigate to `returnTo` instead of the generic entity list; when `returnTo` is absent the page keeps its normal fallback (the entity list, or `/admin/dating` for the dating pages). Because the target is carried in the URL, it survives reloads, new tabs, auth refresh and history changes. The origin's own query string (pagination/filters/sorting) is preserved by capturing `Router.url` verbatim.
+
+`returnTo` is untrusted input and is validated as an **open-redirect guard** by `sanitizeReturnTo` (`projects/backoffice/src/app/shared/navigation/return-to.util.ts`): only path-absolute same-app routes under `/admin` are accepted; absolute/external URLs, protocol-relative `//host`, `javascript:`/other schemes, encoded path separators or `..` traversal, and malformed values are rejected and fall back to the normal list route. Applied on the relation-driven flows: dating from context/bone/skeleton, editing a context from its site, and editing bones/skeletons/individuals/funerary contexts from their parent record.
 
 ## Shared admin UI
 
